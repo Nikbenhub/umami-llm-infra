@@ -71,23 +71,46 @@ ENV PORT=8000
 
 EXPOSE 8000
 
-# Entrypoint: download model on first run, then start llama-server
+# Entrypoint: serve /health immediately, download model, then hand off to llama-server
 COPY --chmod=755 <<'EOF' /usr/local/bin/entrypoint.sh
 #!/bin/bash
 set -e
+
+echo "[entrypoint] Starting — PORT=${PORT} HF_REPO=${HF_REPO} HF_QUANT=${HF_QUANT}"
 
 MODEL_DIR=/models/qwen36
 GGUF_FILE=$(ls ${MODEL_DIR}/*${HF_QUANT}*.gguf 2>/dev/null | head -n1 || true)
 
 if [ -z "${GGUF_FILE}" ]; then
-    echo "Downloading ${HF_REPO} (${HF_QUANT})..."
+    echo "[entrypoint] Model not found — starting health stub on port ${PORT} while downloading..."
+    # Serve 200 on /health during the download so HF's platform health check passes
+    python3 -c "
+import http.server, os, sys
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type','application/json')
+        self.end_headers()
+        self.wfile.write(b'{\"status\":\"loading\"}')
+    def log_message(self, *a): pass
+port = int(os.environ.get('PORT','8000'))
+print(f'[health-stub] listening on {port}', flush=True)
+http.server.HTTPServer(('',port),H).serve_forever()
+" &
+    STUB_PID=$!
+
+    echo "[entrypoint] Downloading ${HF_REPO} quant=${HF_QUANT}..."
     huggingface-cli download "${HF_REPO}" \
         --include "*${HF_QUANT}*" \
         --local-dir "${MODEL_DIR}"
     GGUF_FILE=$(ls ${MODEL_DIR}/*${HF_QUANT}*.gguf | head -n1)
+
+    echo "[entrypoint] Download done: ${GGUF_FILE} — stopping health stub"
+    kill ${STUB_PID} 2>/dev/null || true
+    sleep 1  # brief pause so the port is free before llama-server binds
 fi
 
-echo "Starting llama-server with: ${GGUF_FILE}"
+echo "[entrypoint] Starting llama-server: ${GGUF_FILE}"
 exec llama-server \
     -m "${GGUF_FILE}" \
     -ngl 999 \
@@ -102,8 +125,8 @@ exec llama-server \
     --metrics
 EOF
 
-# Health check (llama-server exposes /health)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=3 \
+# Dockerfile-level healthcheck — HF platform may override this with its own
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=10 \
     CMD curl -fsS http://localhost:${PORT}/health || exit 1
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
