@@ -40,7 +40,7 @@ RUN cmake -B build \
         -DCMAKE_CUDA_ARCHITECTURES=89 \
         -DLLAMA_CURL=ON \
         -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build build -j --config Release --target llama-server
+    && cmake --build build -j2 --config Release --target llama-server
 
 # ---------- Runtime stage ----------
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
