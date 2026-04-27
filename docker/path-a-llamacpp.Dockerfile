@@ -1,7 +1,8 @@
 # Qwen3.6-35B-A3B serving via llama.cpp + Unsloth GGUF
 #
-# Builds llama.cpp from source against CUDA 12.4 for Ada Lovelace (sm_89).
-# Works on RTX 4000 SFF Ada (GEX44), NVIDIA L4, RTX 4090, RTX 4080, etc.
+# Builds llama.cpp from source against CUDA 12.4 for sm_86 + sm_89 (fat binary).
+# sm_89: RTX 4000 SFF Ada (GEX44), NVIDIA L4, RTX 4090, RTX 4080
+# sm_86: NVIDIA A10G, RTX 3090, A40
 # Model is downloaded at runtime to a /models volume — keep it persistent
 # across restarts to avoid re-pulling 16 GB.
 #
@@ -39,7 +40,7 @@ RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/lib/libcuda.so && \
     ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/lib/libcuda.so.1 && \
     cmake -B build \
         -DGGML_CUDA=ON \
-        -DCMAKE_CUDA_ARCHITECTURES=89 \
+        -DCMAKE_CUDA_ARCHITECTURES="86;89" \
         -DLLAMA_CURL=ON \
         -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j2 --config Release --target llama-server
