@@ -40,6 +40,8 @@ RUN cmake -B build \
         -DCMAKE_CUDA_ARCHITECTURES=89 \
         -DLLAMA_CURL=ON \
         -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs" \
+        -DCMAKE_SHARED_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs" \
     && cmake --build build -j2 --config Release --target llama-server
 
 # ---------- Runtime stage ----------
