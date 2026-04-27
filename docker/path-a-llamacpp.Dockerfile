@@ -35,15 +35,14 @@ WORKDIR /opt/llama.cpp
 ARG LLAMA_REF=master
 RUN git checkout ${LLAMA_REF}
 
-RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1 && \
-    LIBRARY_PATH=/usr/local/cuda/lib64/stubs:${LIBRARY_PATH} \
+RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/lib/libcuda.so && \
+    ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/lib/libcuda.so.1 && \
     cmake -B build \
         -DGGML_CUDA=ON \
         -DCMAKE_CUDA_ARCHITECTURES=89 \
         -DLLAMA_CURL=ON \
         -DCMAKE_BUILD_TYPE=Release \
-    && LIBRARY_PATH=/usr/local/cuda/lib64/stubs:${LIBRARY_PATH} \
-       cmake --build build -j2 --config Release --target llama-server
+    && cmake --build build -j2 --config Release --target llama-server
 
 # ---------- Runtime stage ----------
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
