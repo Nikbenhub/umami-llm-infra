@@ -49,7 +49,7 @@ EXPOSE 8000
 #   removed --language-model-only (wrong for chat/instruct models, breaks chat template)
 ENTRYPOINT ["/bin/sh", "-c", "exec vllm serve ${MODEL_REPO} \
     --served-model-name ${SERVED_NAME} \
-    --quantization awq_marlin \
+    --quantization awq \
     --max-model-len ${MAX_MODEL_LEN} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
     --enforce-eager \
