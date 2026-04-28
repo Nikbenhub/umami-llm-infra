@@ -1,6 +1,9 @@
-# Qwen3.6-35B-A3B serving via vLLM + cyankiwi compressed-tensors quant
+# Qwen3.6-35B-A3B serving via vLLM + HLWQ CT INT4 (Marlin kernels)
 #
-# Built on top of the official vLLM image.
+# caiovicentino1/Qwen3.6-35B-A3B-HLWQ-CT-INT4 is 19.4 GB total vs ~24 GB
+# for cyankiwi AWQ because it quantizes more layers (only 1.3 GB BF16 vs 3.7 GB).
+# At gpu-memory-utilization=0.95 on A10G 24 GB: 22.8 GB usable - 19.4 GB model
+# = ~3.4 GB for fp8 KV cache, enough for 36 K context.
 #
 # Build:
 #   docker build -f path-b-vllm.Dockerfile -t ghcr.io/<you>/qwen36-vllm:latest .
@@ -14,24 +17,24 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 # Configurable via env vars
-ENV MODEL_REPO=cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit
+ENV MODEL_REPO=caiovicentino1/Qwen3.6-35B-A3B-HLWQ-CT-INT4
 ENV SERVED_NAME=qwen3.6-35b
-ENV MAX_MODEL_LEN=8192
-ENV GPU_MEMORY_UTILIZATION=0.85
+ENV MAX_MODEL_LEN=36000
+ENV GPU_MEMORY_UTILIZATION=0.95
+ENV KV_CACHE_DTYPE=fp8
 ENV PORT=8000
 
 EXPOSE 8000
 
 # Health stub responds to /health immediately while vLLM downloads + loads the model.
 # Without it, HF's platform health check times out and kills the endpoint.
-# Once vLLM binds port 8000 the stub is already dead (port conflict kills it).
 COPY --chmod=755 <<'EOF' /usr/local/bin/entrypoint.sh
 #!/bin/bash
 set -e
 
 echo "[entrypoint] Starting health stub on port ${PORT}..."
 python3 -c "
-import http.server, os, threading, time, subprocess, sys, signal
+import http.server, os, threading, time
 
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -53,24 +56,23 @@ def serve():
 
 t = threading.Thread(target=serve, daemon=True)
 t.start()
-
-# Give stub time to bind, then launch vLLM in foreground
 time.sleep(2)
 server.shutdown()
 " &
-STUB_PID=$!
-sleep 3  # wait for stub to bind and then shut itself down
+sleep 3
 
 echo "[entrypoint] Launching vLLM..."
 exec vllm serve ${MODEL_REPO} \
     --served-model-name ${SERVED_NAME} \
     --quantization compressed-tensors \
-    --task generate \
     --max-model-len ${MAX_MODEL_LEN} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
+    --kv-cache-dtype ${KV_CACHE_DTYPE} \
     --enforce-eager \
+    --reasoning-parser qwen3 \
     --no-enable-prefix-caching \
     --disable-log-requests \
+    --default-chat-template-kwargs '{"enable_thinking":false,"preserve_thinking":true}' \
     --host 0.0.0.0 --port ${PORT}
 EOF
 
