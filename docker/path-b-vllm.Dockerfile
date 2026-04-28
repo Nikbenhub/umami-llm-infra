@@ -24,15 +24,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Multiproc method explicitly required for Qwen3.5/3.6 family per Qwen docs
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 
-# Set this to "0" if V1 backend crashes on Qwen3 MoE (issue #24436)
-# ENV VLLM_USE_V1=0
+# Use V0 backend — V1 can crash on Qwen3 MoE hybrid GDN (issue #24436)
+ENV VLLM_USE_V1=0
 
 # Configurable via env vars
 ENV MODEL_REPO=cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit
 ENV SERVED_NAME=qwen3.6-35b
-# 36K covers our largest billing prompt (~34K tokens). fp8 KV is required to fit
-# on A10G 24GB — bf16 KV would need ~4GB for 36K context vs ~2GB for fp8.
-ENV MAX_MODEL_LEN=36000
+# Start conservative (8K) to confirm the server boots; override via endpoint env var
+# once confirmed working. Full eval needs 36K (billing prompt is ~34K regardless of transcript).
+ENV MAX_MODEL_LEN=8192
 ENV GPU_MEMORY_UTILIZATION=0.85
 ENV KV_CACHE_DTYPE=fp8
 ENV PORT=8000
