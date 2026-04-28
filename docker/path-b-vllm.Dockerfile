@@ -30,9 +30,11 @@ ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 # Configurable via env vars
 ENV MODEL_REPO=cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit
 ENV SERVED_NAME=qwen3.6-35b
-ENV MAX_MODEL_LEN=16384
+# 36K covers our largest billing prompt (~34K tokens). fp8 KV is required to fit
+# on A10G 24GB — bf16 KV would need ~4GB for 36K context vs ~2GB for fp8.
+ENV MAX_MODEL_LEN=36000
 ENV GPU_MEMORY_UTILIZATION=0.85
-ENV KV_CACHE_DTYPE=auto
+ENV KV_CACHE_DTYPE=fp8
 ENV PORT=8000
 
 EXPOSE 8000
@@ -45,7 +47,6 @@ EXPOSE 8000
 #   no --enable-chunked-prefill (issue #22616 — slow on high context for MoE)
 #   --gpu-memory-utilization 0.85 (issue #37121 — vLLM over-allocates KV ~7x for hybrid)
 #   removed --language-model-only (wrong for chat/instruct models, breaks chat template)
-#   removed --kv-cache-dtype fp8 (fp8 KV needs sm_89+ / Hopper; use auto for portability)
 ENTRYPOINT ["/bin/sh", "-c", "exec vllm serve ${MODEL_REPO} \
     --served-model-name ${SERVED_NAME} \
     --quantization awq_marlin \
