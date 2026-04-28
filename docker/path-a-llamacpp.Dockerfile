@@ -69,6 +69,7 @@ ENV HF_REPO=unsloth/Qwen3.6-35B-A3B-GGUF
 ENV HF_QUANT=UD-IQ4_XS
 ENV CONTEXT_LEN=16384
 ENV PORT=8000
+ENV ENABLE_THINKING=true
 
 EXPOSE 8000
 
@@ -120,7 +121,7 @@ exec llama-server \
     -ctk q8_0 -ctv q8_0 \
     --jinja \
     --temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5 \
-    --chat-template-kwargs '{"enable_thinking":false,"preserve_thinking":true}' \
+    --chat-template-kwargs "{\"enable_thinking\":${ENABLE_THINKING},\"preserve_thinking\":true}" \
     --threads 6 \
     --host 0.0.0.0 --port "${PORT}" \
     --metrics
