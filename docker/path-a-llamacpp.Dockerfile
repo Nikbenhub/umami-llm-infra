@@ -101,7 +101,7 @@ http.server.HTTPServer(('',port),H).serve_forever()
     STUB_PID=$!
 
     echo "[entrypoint] Downloading ${HF_REPO} quant=${HF_QUANT}..."
-    huggingface-cli download "${HF_REPO}" \
+    hf download "${HF_REPO}" \
         --include "*${HF_QUANT}*" \
         --local-dir "${MODEL_DIR}"
     GGUF_FILE=$(ls ${MODEL_DIR}/*${HF_QUANT}*.gguf | head -n1)
