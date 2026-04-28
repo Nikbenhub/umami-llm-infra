@@ -51,7 +51,7 @@ FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libcurl4 python3-pip ca-certificates curl \
+        libcurl4 python3-pip ca-certificates curl libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir -U "huggingface_hub[cli]"
