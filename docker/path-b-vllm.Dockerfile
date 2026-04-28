@@ -52,12 +52,7 @@ ENTRYPOINT ["/bin/sh", "-c", "exec vllm serve ${MODEL_REPO} \
     --quantization awq_marlin \
     --max-model-len ${MAX_MODEL_LEN} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
-    --kv-cache-dtype ${KV_CACHE_DTYPE} \
     --enforce-eager \
-    --reasoning-parser qwen3 \
-    --no-enable-prefix-caching \
-    --disable-log-requests \
-    --default-chat-template-kwargs '{\"enable_thinking\":false,\"preserve_thinking\":true}' \
     --host 0.0.0.0 --port ${PORT}"]
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=600s --retries=3 \
