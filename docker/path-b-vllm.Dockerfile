@@ -32,6 +32,7 @@ ENV MODEL_REPO=cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit
 ENV SERVED_NAME=qwen3.6-35b
 ENV MAX_MODEL_LEN=16384
 ENV GPU_MEMORY_UTILIZATION=0.85
+ENV KV_CACHE_DTYPE=auto
 ENV PORT=8000
 
 EXPOSE 8000
@@ -43,15 +44,16 @@ EXPOSE 8000
 #   no --speculative-config (MTP is net-negative on Ada per benchmarks)
 #   no --enable-chunked-prefill (issue #22616 — slow on high context for MoE)
 #   --gpu-memory-utilization 0.85 (issue #37121 — vLLM over-allocates KV ~7x for hybrid)
+#   removed --language-model-only (wrong for chat/instruct models, breaks chat template)
+#   removed --kv-cache-dtype fp8 (fp8 KV needs sm_89+ / Hopper; use auto for portability)
 ENTRYPOINT ["/bin/sh", "-c", "exec vllm serve ${MODEL_REPO} \
     --served-model-name ${SERVED_NAME} \
     --quantization awq_marlin \
     --max-model-len ${MAX_MODEL_LEN} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
-    --kv-cache-dtype fp8 \
+    --kv-cache-dtype ${KV_CACHE_DTYPE} \
     --enforce-eager \
     --reasoning-parser qwen3 \
-    --language-model-only \
     --no-enable-prefix-caching \
     --disable-log-requests \
     --default-chat-template-kwargs '{\"enable_thinking\":false,\"preserve_thinking\":true}' \
