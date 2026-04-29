@@ -82,6 +82,7 @@ exec vllm serve ${MODEL_REPO} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
     --kv-cache-dtype ${KV_CACHE_DTYPE} \
     --enforce-eager \
+    --language-model-only \
     --moe-expert-cache-size 64 \
     --reasoning-parser qwen3 \
     --no-enable-prefix-caching \
