@@ -13,6 +13,12 @@ FROM vllm/vllm-openai:v0.19.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install caiovicentino's expert-offload fork on top of the base vLLM image.
+# This adds --moe-expert-cache-size and per-expert compressed-tensors loading,
+# both required for caiovicentino1/Qwen3.6-35B-A3B-HLWQ-CT-INT4.
+RUN pip install --no-cache-dir --upgrade \
+    git+https://github.com/caiovicentino/vllm-expert-offload.git
+
 # Multiproc method explicitly required for Qwen3.5/3.6 family per Qwen docs
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 
@@ -69,6 +75,7 @@ exec vllm serve ${MODEL_REPO} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
     --kv-cache-dtype ${KV_CACHE_DTYPE} \
     --enforce-eager \
+    --moe-expert-cache-size 64 \
     --reasoning-parser qwen3 \
     --no-enable-prefix-caching \
     --disable-log-requests \
