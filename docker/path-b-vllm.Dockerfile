@@ -1,8 +1,8 @@
-# Qwen3.6-35B-A3B serving via vLLM + AutoRound INT3 (GPTQ-packed)
+# Qwen3.6-35B-A3B serving via vLLM + AutoRound INT3
 #
-# electroglyph/Qwen3.6-35B-A3B-autoround-int3: 3-bit, packing=auto_gptq,
-# ~15 GB GPU footprint vs 21.5 GB for 4-bit GPTQ. Leaves ~7.8 GB for KV cache
-# at 36K context (needs only ~1.4 GB: 40 layers × 2 KV heads × head_dim 256).
+# electroglyph/Qwen3.6-35B-A3B-autoround-int3: 3-bit, packing=auto_round:auto_gptq
+# Requires --quantization auto_round (NOT gptq) to apply quantization correctly.
+# Without it vLLM loads at wrong precision (~21.5 GiB instead of ~13 GiB).
 #
 # Build:
 #   docker build -f path-b-vllm.Dockerfile -t ghcr.io/<you>/qwen36-vllm:latest .
@@ -18,7 +18,7 @@ ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 # Configurable via env vars
 ENV MODEL_REPO=electroglyph/Qwen3.6-35B-A3B-autoround-int3
 ENV SERVED_NAME=qwen3.6-35b
-ENV MAX_MODEL_LEN=36000
+ENV MAX_MODEL_LEN=16000
 ENV GPU_MEMORY_UTILIZATION=0.95
 ENV KV_CACHE_DTYPE=fp8
 ENV PORT=8000
@@ -63,7 +63,7 @@ sleep 3
 echo "[entrypoint] Launching vLLM..."
 exec vllm serve ${MODEL_REPO} \
     --served-model-name ${SERVED_NAME} \
-    --quantization gptq \
+    --quantization auto_round \
     --dtype float16 \
     --max-model-len ${MAX_MODEL_LEN} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
