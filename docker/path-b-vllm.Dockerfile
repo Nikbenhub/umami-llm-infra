@@ -64,6 +64,7 @@ echo "[entrypoint] Launching vLLM..."
 exec vllm serve ${MODEL_REPO} \
     --served-model-name ${SERVED_NAME} \
     --quantization gptq \
+    --dtype float16 \
     --max-model-len ${MAX_MODEL_LEN} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
     --kv-cache-dtype fp8 \
