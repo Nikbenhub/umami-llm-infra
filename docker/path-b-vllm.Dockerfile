@@ -85,7 +85,6 @@ exec vllm serve ${MODEL_REPO} \
     --moe-expert-cache-size 64 \
     --reasoning-parser qwen3 \
     --no-enable-prefix-caching \
-    --disable-log-requests \
     --default-chat-template-kwargs '{"enable_thinking":false,"preserve_thinking":true}' \
     --host 0.0.0.0 --port ${PORT}
 EOF
