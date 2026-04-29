@@ -16,10 +16,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install caiovicentino's expert-offload fork on top of the base vLLM image.
 # This adds --moe-expert-cache-size and per-expert compressed-tensors loading,
 # both required for caiovicentino1/Qwen3.6-35B-A3B-HLWQ-CT-INT4.
+# Patch in caiovicentino's expert-offload fork (Python-only changes).
+# We clone and overwrite vllm's Python package in-place so the already-compiled
+# CUDA extensions from the base image are preserved — no recompilation needed.
 RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && pip install --no-cache-dir --upgrade \
-        git+https://github.com/caiovicentino/vllm-expert-offload.git \
-    && rm -rf /var/lib/apt/lists/*
+    && git clone --depth=1 https://github.com/caiovicentino/vllm-expert-offload.git /tmp/vllm-fork \
+    && VLLM_DIR=$(python3 -c "import vllm, os; print(os.path.dirname(vllm.__file__))") \
+    && cp -r /tmp/vllm-fork/vllm/. "$VLLM_DIR/" \
+    && rm -rf /tmp/vllm-fork \
+    && apt-get purge -y git && rm -rf /var/lib/apt/lists/*
 
 # Multiproc method explicitly required for Qwen3.5/3.6 family per Qwen docs
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
