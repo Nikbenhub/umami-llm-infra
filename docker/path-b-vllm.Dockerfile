@@ -1,8 +1,8 @@
-# Qwen3.6-35B-A3B serving via vLLM + GPTQ Int4
+# Qwen3.6-35B-A3B serving via vLLM + AutoRound INT3 (GPTQ-packed)
 #
-# btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit uses standard GPTQ quantization that
-# vLLM 0.19.1 supports natively (Marlin GPTQ kernels). ~20 GB GPU footprint,
-# leaving ~3 GB for fp8 KV cache at 36K context on A10G 24 GB.
+# electroglyph/Qwen3.6-35B-A3B-autoround-int3: 3-bit, packing=auto_gptq,
+# ~15 GB GPU footprint vs 21.5 GB for 4-bit GPTQ. Leaves ~7.8 GB for KV cache
+# at 36K context (needs only ~1.4 GB: 40 layers × 2 KV heads × head_dim 256).
 #
 # Build:
 #   docker build -f path-b-vllm.Dockerfile -t ghcr.io/<you>/qwen36-vllm:latest .
@@ -16,7 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 # Configurable via env vars
-ENV MODEL_REPO=btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit
+ENV MODEL_REPO=electroglyph/Qwen3.6-35B-A3B-autoround-int3
 ENV SERVED_NAME=qwen3.6-35b
 ENV MAX_MODEL_LEN=36000
 ENV GPU_MEMORY_UTILIZATION=0.95
