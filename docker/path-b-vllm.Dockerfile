@@ -1,9 +1,8 @@
-# Qwen3.6-35B-A3B serving via vLLM + HLWQ CT INT4 (Marlin kernels)
+# Qwen3.6-35B-A3B serving via vLLM + GPTQ Int4
 #
-# caiovicentino1/Qwen3.6-35B-A3B-HLWQ-CT-INT4 is 19.4 GB total vs ~24 GB
-# for cyankiwi AWQ because it quantizes more layers (only 1.3 GB BF16 vs 3.7 GB).
-# At gpu-memory-utilization=0.95 on A10G 24 GB: 22.8 GB usable - 19.4 GB model
-# = ~3.4 GB for fp8 KV cache, enough for 36 K context.
+# btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit uses standard GPTQ quantization that
+# vLLM 0.19.1 supports natively (Marlin GPTQ kernels). ~20 GB GPU footprint,
+# leaving ~3 GB for fp8 KV cache at 36K context on A10G 24 GB.
 #
 # Build:
 #   docker build -f path-b-vllm.Dockerfile -t ghcr.io/<you>/qwen36-vllm:latest .
@@ -13,24 +12,11 @@ FROM vllm/vllm-openai:v0.19.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install caiovicentino's expert-offload fork on top of the base vLLM image.
-# This adds --moe-expert-cache-size and per-expert compressed-tensors loading,
-# both required for caiovicentino1/Qwen3.6-35B-A3B-HLWQ-CT-INT4.
-# Patch in caiovicentino's expert-offload fork (Python-only changes).
-# We clone and overwrite vllm's Python package in-place so the already-compiled
-# CUDA extensions from the base image are preserved — no recompilation needed.
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && git clone --depth=1 https://github.com/caiovicentino/vllm-expert-offload.git /tmp/vllm-fork \
-    && VLLM_DIR=$(python3 -c "import vllm, os; print(os.path.dirname(vllm.__file__))") \
-    && cp -r /tmp/vllm-fork/vllm/. "$VLLM_DIR/" \
-    && rm -rf /tmp/vllm-fork \
-    && apt-get purge -y git && rm -rf /var/lib/apt/lists/*
-
 # Multiproc method explicitly required for Qwen3.5/3.6 family per Qwen docs
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 # Configurable via env vars
-ENV MODEL_REPO=caiovicentino1/Qwen3.6-35B-A3B-HLWQ-CT-INT4
+ENV MODEL_REPO=btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit
 ENV SERVED_NAME=qwen3.6-35b
 ENV MAX_MODEL_LEN=36000
 ENV GPU_MEMORY_UTILIZATION=0.95
@@ -77,13 +63,12 @@ sleep 3
 echo "[entrypoint] Launching vLLM..."
 exec vllm serve ${MODEL_REPO} \
     --served-model-name ${SERVED_NAME} \
-    --quantization compressed-tensors \
+    --quantization gptq \
     --max-model-len ${MAX_MODEL_LEN} \
     --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION} \
-    --kv-cache-dtype ${KV_CACHE_DTYPE} \
+    --kv-cache-dtype fp8 \
     --enforce-eager \
     --language-model-only \
-    --moe-expert-cache-size 64 \
     --reasoning-parser qwen3 \
     --no-enable-prefix-caching \
     --default-chat-template-kwargs '{"enable_thinking":false,"preserve_thinking":true}' \
